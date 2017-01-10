@@ -22,6 +22,7 @@
 #include <base/strings/string_util.h>
 #include <brillo/make_unique_ptr.h>
 #include <brillo/message_loops/message_loop.h>
+#include <string.h>
 
 #include "update_engine/common/utils.h"
 #include "update_engine/utils_android.h"
@@ -117,11 +118,11 @@ bool BootControlAndroid::GetPartitionDevice(const string& partition_name,
   if (!utils::DeviceForMountPoint("/misc", &misc_device))
     return false;
 
-  if (!utils::IsSymlink(misc_device.value().c_str())) {
+  /*if (!utils::IsSymlink(misc_device.value().c_str())) {
     LOG(ERROR) << "Device file " << misc_device.value() << " for /misc "
                << "is not a symlink.";
     return false;
-  }
+  }*/
 
   const char* suffix = module_->getSuffix(module_, slot);
   if (suffix == nullptr) {
@@ -130,14 +131,31 @@ bool BootControlAndroid::GetPartitionDevice(const string& partition_name,
     return false;
   }
 
-  base::FilePath path = misc_device.DirName().Append(partition_name + suffix);
-  if (!base::PathExists(path)) {
-    LOG(ERROR) << "Device file " << path.value() << " does not exist.";
-    return false;
+  if (!strcmp(partition_name.c_str(), "dtb")) {
+    base::FilePath path = base::FilePath("/dev/dtb");
+    if (!base::PathExists(path)) {
+      LOG(ERROR) << "Device file " << path.value() << " does not exist.";
+      return false;
+    }
+    *device = path.value();
+    return true;
+  }else if (strcmp(partition_name.c_str(), "system") && strcmp(partition_name.c_str(), "boot")) {
+    base::FilePath path = misc_device.DirName().Append(partition_name);
+    if (!base::PathExists(path)) {
+      LOG(ERROR) << "Device file " << path.value() << " does not exist.";
+      return false;
+    }
+    *device = path.value();
+    return true;
+  } else {
+    base::FilePath path = misc_device.DirName().Append(partition_name + suffix);
+    if (!base::PathExists(path)) {
+      LOG(ERROR) << "Device file " << path.value() << " does not exist.";
+      return false;
+    }
+    *device = path.value();
+    return true;
   }
-
-  *device = path.value();
-  return true;
 }
 
 bool BootControlAndroid::IsSlotBootable(Slot slot) const {

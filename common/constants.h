@@ -19,6 +19,8 @@
 
 namespace chromeos_update_engine {
 
+extern const char kDtbstorePath[];
+
 // Directory for AU prefs that are preserved across powerwash.
 extern const char kPowerwashSafePrefsSubDirectory[];
 

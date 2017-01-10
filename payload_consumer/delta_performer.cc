@@ -18,6 +18,7 @@
 
 #include <endian.h>
 #include <errno.h>
+#include <string.h>
 #include <linux/fs.h>
 
 #include <algorithm>
@@ -273,6 +274,77 @@ size_t DeltaPerformer::CopyDataToBuffer(const char** bytes_p, size_t* count_p,
 }
 
 
+bool DeltaPerformer::OpenTmpFileForDtb() {
+  int err = 0;
+  int ret = 0;
+
+  ret = creat(kDtbstorePath, O_CREAT|O_RDWR|O_TRUNC);
+  if (ret == -1) {
+    LOG(ERROR) << "creat file failed: " << kDtbstorePath;
+    return false;
+  }
+
+  target_fd_ = OpenFile(kDtbstorePath, O_RDWR, &err);
+  if (!target_fd_) {
+    LOG(ERROR) << "Unable to fopen target tmp file:" << kDtbstorePath;
+    return false;
+  }
+  return true;
+}
+
+bool DeltaPerformer::StoreTmpFileForDtb() {
+    int len_r = 0;
+    int len_w = 0;
+    FILE *sor_fd = fopen(kDtbstorePath, "r");
+    if (sor_fd == NULL) {
+        LOG(ERROR) << "Unable to fopen target tmp file:" << kDtbstorePath;
+        return false;
+    }
+
+    fseek(sor_fd, 0, SEEK_END);
+    int dtb_length = ftell(sor_fd);
+    fseek(sor_fd, 0, SEEK_SET);
+
+    void *buffer = (void *)malloc(dtb_length);
+    if (buffer == NULL) {
+        LOG(ERROR) << "malloc buffer failed!";
+        fclose(sor_fd);
+        return false;
+    }
+
+    len_r = fread(buffer, 1, dtb_length, sor_fd);
+    if (len_r != dtb_length) {
+        LOG(ERROR) << "fread failed!, file:" << kDtbstorePath;
+        free(buffer);
+        fclose(sor_fd);
+        return false;
+    }
+
+    fclose(sor_fd);
+
+    int tar_fd = open("/dev/dtb", O_RDWR);
+    if (tar_fd < 0) {
+        LOG(ERROR) << "open /dev/dtb failed";
+        return false;
+    }
+
+    len_w = write(tar_fd, buffer, len_r);
+    if (len_w != len_r) {
+        LOG(ERROR) << "write /dev/dtb failed";
+        free(buffer);
+        close(tar_fd);
+        return false;
+    }
+
+    free(buffer);
+    close(tar_fd);
+
+    unlink(kDtbstorePath);
+
+    return true;
+}
+
+
 bool DeltaPerformer::HandleOpResult(bool op_result, const char* op_type_name,
                                     ErrorCode* error) {
   if (op_result)
@@ -343,6 +415,14 @@ bool DeltaPerformer::OpenCurrentPartition() {
                  << ", file " << source_path_;
       return false;
     }
+  }
+
+  LOG(INFO) << "partition.partition_name():" << partition.partition_name() ;
+  if (!strcmp("dtb", partition.partition_name().c_str())) {
+    char_device_ = true;
+    return OpenTmpFileForDtb();
+  } else {
+    char_device_ = false;
   }
 
   target_path_ = install_plan_->partitions[current_partition_].target_path;
@@ -736,6 +816,15 @@ bool DeltaPerformer::Write(const void* bytes, size_t count, ErrorCode *error) {
     UpdateOverallProgress(false, "Completed ");
     CheckpointUpdateProgress();
   }
+
+  if (char_device_ == true) {
+    if(!StoreTmpFileForDtb()) {
+        LOG(ERROR) << "store dtb.img to /dev/dtb failed!";
+        *error = ErrorCode::kPostinstallRunnerError;
+        return false;
+    }
+  }
+
 
   // In major version 2, we don't add dummy operation to the payload.
   // If we already extracted the signature we should skip this step.

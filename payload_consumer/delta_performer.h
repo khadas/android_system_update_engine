@@ -105,6 +105,11 @@ class DeltaPerformer : public FileWriter {
   // work. Returns whether the required file descriptors were successfully open.
   bool OpenCurrentPartition();
 
+  bool OpenTmpFileForDtb();
+
+  bool StoreTmpFileForDtb();
+
+
   // Closes the current partition file descriptors if open. Returns 0 on success
   // or -errno on error.
   int CloseCurrentPartition();
@@ -316,6 +321,7 @@ class DeltaPerformer : public FileWriter {
   // File descriptor of the target partition. Only set while performing the
   // operations of a given partition.
   FileDescriptorPtr target_fd_{nullptr};
+  bool char_device_{false};
 
   // Paths the |source_fd_| and |target_fd_| refer to.
   std::string source_path_;

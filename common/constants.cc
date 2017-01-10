@@ -18,6 +18,8 @@
 
 namespace chromeos_update_engine {
 
+const char kDtbstorePath[] = "/data/misc/update_engine/dtb.img";
+
 const char kPowerwashSafePrefsSubDirectory[] = "update_engine/prefs";
 
 const char kPrefsSubDirectory[] = "prefs";
