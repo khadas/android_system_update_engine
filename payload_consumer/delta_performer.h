@@ -105,6 +105,11 @@ class DeltaPerformer : public FileWriter {
   // work. Returns whether the required file descriptors were successfully open.
   bool OpenCurrentPartition();
 
+  bool OpenTmpFileForDtb();
+
+  bool StoreTmpFileForDtb();
+
+
   // Closes the current partition file descriptors if open. Returns 0 on success
   // or -errno on error.
   int CloseCurrentPartition();
@@ -250,12 +255,16 @@ class DeltaPerformer : public FileWriter {
   bool PerformInstallOperation(const InstallOperation& operation);
 
   // These perform a specific type of operation and return true on success.
+  // |error| will be set if source hash mismatch, otherwise |error| might not be
+  // set even if it fails.
   bool PerformReplaceOperation(const InstallOperation& operation);
   bool PerformZeroOrDiscardOperation(const InstallOperation& operation);
   bool PerformMoveOperation(const InstallOperation& operation);
   bool PerformBsdiffOperation(const InstallOperation& operation);
-  bool PerformSourceCopyOperation(const InstallOperation& operation);
-  bool PerformSourceBsdiffOperation(const InstallOperation& operation);
+  bool PerformSourceCopyOperation(const InstallOperation& operation,
+                                  ErrorCode* error);
+  bool PerformSourceBsdiffOperation(const InstallOperation& operation,
+                                    ErrorCode* error);
 
   // Extracts the payload signature message from the blob on the |operation| if
   // the offset matches the one specified by the manifest. Returns whether the
@@ -312,6 +321,7 @@ class DeltaPerformer : public FileWriter {
   // File descriptor of the target partition. Only set while performing the
   // operations of a given partition.
   FileDescriptorPtr target_fd_{nullptr};
+  bool char_device_{false};
 
   // Paths the |source_fd_| and |target_fd_| refer to.
   std::string source_path_;

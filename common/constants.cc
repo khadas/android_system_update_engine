@@ -18,10 +18,7 @@
 
 namespace chromeos_update_engine {
 
-const char kPowerwashMarkerFile[] =
-    "/mnt/stateful_partition/factory_install_reset";
-
-const char kPowerwashCommand[] = "safe fast keepimg reason=update_engine\n";
+const char kDtbstorePath[] = "/data/misc/update_engine/dtb.img";
 
 const char kPowerwashSafePrefsSubDirectory[] = "update_engine/prefs";
 
@@ -96,5 +93,7 @@ const char kPayloadPropertyMetadataSize[] = "METADATA_SIZE";
 const char kPayloadPropertyMetadataHash[] = "METADATA_HASH";
 const char kPayloadPropertyAuthorization[] = "AUTHORIZATION";
 const char kPayloadPropertyUserAgent[] = "USER_AGENT";
+const char kPayloadPropertyPowerwash[] = "POWERWASH";
+const char kPayloadPropertyNetworkId[] = "NETWORK_ID";
 
 }  // namespace chromeos_update_engine
